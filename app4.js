@@ -1,28 +1,35 @@
 /**
- * Create a program that outputs the HTTP method, Path, Port, and Header fields as a JSON object on the body of the Web server's response.
+ *  4.  Define the /login end-point
+ *  4.1 The GET request should return a form with Username and Password input fields.
+ *  4.2 The Password input field should be of type "password".
+ *  4.3 Submit the form using the POST method, your server should respond with a JSON object with the following structure:
+ *      { "username": "admin", "password": "12345" }
+ *  4.4 Static code for the POST response should be of status code 200 and Content-type application/json
  */
+
 
 var express = require('express');
 var app = express();
+var path = require("path");
+var bodyParser = require('body-parser')
+app.use(bodyParser.urlencoded({ extended: false }))
 
-app.use(function (req, res, next) {
+app.get('/login', function (req, res) {
+ res.sendFile(path.join(__dirname+'/pages/login.html'));
+});
 
-    var jsonResult = new Object();
+app.post('/login', function (req, res) {
+ 
+ res.setHeader('Content-Type', 'application/json'); //Done by default
 
-    //http://stackoverflow.com/questions/6857468/converting-a-js-object-to-an-array
-    var headerArray = Object.keys(req.headers).map(function (key) { return req.headers[key]; });
+ var credentials = new Object();
+ credentials.username = req.body.username;
+ credentials.password = req.body.password;
 
-    jsonResult.header = headerArray;
-
-    jsonResult.method = req.method;
-    jsonResult.protocol = req.protocol;
-    jsonResult.path = req.path;
-    jsonResult.port = req.headers.host.split(':')[1];
-
-    res.send(jsonResult);
-
-    next();
+ res.status(200);
+ res.send(credentials);
 });
 
 
 app.listen(8083);
+
