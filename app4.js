@@ -72,4 +72,25 @@ app.post('/login', function (req, res) {
     
     res.send(req.body);
 });
+
+
+
+app.get('*', function(req,res){
+
+    var jsonResult = new Object();
+
+    //http://stackoverflow.com/questions/6857468/converting-a-js-object-to-an-array
+    var headerArray = Object.keys(req.headers).map(function (key) { return req.headers[key]; });
+
+    jsonResult.header = headerArray;
+
+    jsonResult.method = req.method;
+    jsonResult.protocol = req.protocol;
+    jsonResult.path = req.path;
+    jsonResult.port = req.headers.host.split(':')[1];
+    jsonResult.host = req.headers.host.split(':')[0];
+    res.send(jsonResult);
+
+});
+
 app.listen(8083);
