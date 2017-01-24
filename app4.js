@@ -1,11 +1,11 @@
 /**
- *  3. Return status code 500 at path /error
+ *  3. Return status code 500 at path /error when GET
  */
 
 var express = require('express');
 var app = express();
 
-app.use('/error', function (req, res, next) {
+app.get('/error', function (req, res) {
   res.status(500);  
   res.send();
 });
