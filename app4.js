@@ -21,13 +21,9 @@ app.get('/login', function (req, res) {
 app.post('/login', function (req, res) {
  
  res.setHeader('Content-Type', 'application/json'); //Done by default
+ res.status(200); //Done by default
 
- var credentials = new Object();
- credentials.username = req.body.username;
- credentials.password = req.body.password;
-
- res.status(200);
- res.send(credentials);
+ res.send(req.body);
 });
 
 
