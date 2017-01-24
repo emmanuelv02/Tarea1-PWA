@@ -18,5 +18,12 @@ app.get('/protected', function (req, res) {
     res.send();
 });
 
+/**
+ *  3. Return status code 500 at path /error when GET
+ */
+app.get('/error', function (req, res) {
+    res.status(500);
+    res.send();
+});
 
 app.listen(8083);
