@@ -4,7 +4,7 @@ var express = require('express');
 var app = express();
 var path = require("path");
 var bodyParser = require('body-parser')
-app.use(bodyParser.urlencoded({ extended: false }))
+app.use(bodyParser.json());
 
 /**
  *  1. Return status code 404 at path /404 when GET
@@ -46,8 +46,8 @@ app.use('/notimplemented', function (req, res, next) {
         res.status(200);
     }
     else {
-        //wasn't told on the specification so any other method will returns statuscode 500.
-        res.status(500);
+        //any other shall return 501
+        res.status(501);
     }
 
     res.send();
@@ -69,7 +69,7 @@ app.post('/login', function (req, res) {
 
     res.setHeader('Content-Type', 'application/json'); //Done by default
     res.status(200); //Done by default
-
+    
     res.send(req.body);
 });
 app.listen(8083);
