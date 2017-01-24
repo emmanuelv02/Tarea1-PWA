@@ -1,28 +1,32 @@
 /**
- * Create a program that outputs the HTTP method, Path, Port, and Header fields as a JSON object on the body of the Web server's response.
+ *  6.  Return status code 501 at path /notimplemented when get
+ *  6.1 The Allow response header  list GET, POST, PUT
+ *  6.2  Status code 200 for GET, POST & PUT at this path.
  */
 
 var express = require('express');
+var bodyParser = require('body-parser')
+
 var app = express();
 
-app.use(function (req, res, next) {
+app.use(bodyParser.urlencoded({ extended: false }))
 
-    var jsonResult = new Object();
+app.use('/notimplemented', function (req, res, next) {
 
-    //http://stackoverflow.com/questions/6857468/converting-a-js-object-to-an-array
-    var headerArray = Object.keys(req.headers).map(function (key) { return req.headers[key]; });
+    res.setHeader("Allow", "PUT, GET, POST");
 
-    jsonResult.header = headerArray;
+    if (req.method == "get") {
+        res.status(501);
+    }
+    else if(req.method == "PUT" || req.method == "GET" || req.method == "POST"){
+        res.status(200);
+    }
+    else{
+        //wasn't told on the specification so any other method will returns statuscode 500.
+        res.status(500);
+    }
 
-    jsonResult.method = req.method;
-    jsonResult.protocol = req.protocol;
-    jsonResult.path = req.path;
-    jsonResult.port = req.headers.host.split(':')[1];
-
-    res.send(jsonResult);
-
-    next();
+    res.send();
 });
-
 
 app.listen(8083);
