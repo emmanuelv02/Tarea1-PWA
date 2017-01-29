@@ -1,17 +1,37 @@
-
-
 var express = require('express');
 var app = express();
 var path = require("path");
 var bodyParser = require('body-parser')
 app.use(bodyParser.json());
 
+var router = express.Router();
+var hbs = require('express-handlebars');
+
+app.engine('hbs', hbs({extname: 'hbs', defaultLayout: 'MainTemplate', layoutsDir: __dirname + '/views/layouts/'}));
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'hbs');
+
+router.get('/movies/create', function (req, res) {
+      res.render('createMovie', { title: 'Create Movie', createmovie: true  });
+});
+
+app.get('/css/*', function (req, res) {
+    res.sendFile(path.join(__dirname + '/views'+req.path));
+});
+app.get('/js/*', function (req, res) {
+    res.sendFile(path.join(__dirname + '/views'+req.path));
+});
+
+app.use('/', router);
+
+//#region previous assignations
+
 /**
  *  1. Return status code 404 at path /404 when GET
  */
 app.get('/404', function (req, res) {
-  res.status(404);  
-  res.send();
+    res.status(404);
+    res.send();
 });
 
 /**
@@ -62,25 +82,27 @@ app.use('/notimplemented', function (req, res, next) {
  *  4.4 Static code for the POST response should be of status code 200 and Content-type application/json
  */
 app.get('/login', function (req, res) {
-    res.sendFile(path.join(__dirname + '/pages/login.html'));
+    res.sendFile(path.join(__dirname + '/views/login.html'));
 });
 
 app.post('/login', function (req, res) {
 
     res.setHeader('Content-Type', 'application/json'); //Done by default
     res.status(200); //Done by default
-    
+
     res.send(req.body);
 });
 
 
-
-app.get('*', function(req,res){
+//Second assignation
+app.get('*', function (req, res) {
 
     var jsonResult = new Object();
 
     //http://stackoverflow.com/questions/6857468/converting-a-js-object-to-an-array
-    var headerArray = Object.keys(req.headers).map(function (key) { return req.headers[key]; });
+    var headerArray = Object.keys(req.headers).map(function (key) {
+        return req.headers[key];
+    });
 
     jsonResult.header = headerArray;
 
@@ -92,5 +114,7 @@ app.get('*', function(req,res){
     res.send(jsonResult);
 
 });
+
+//#endregion
 
 app.listen(8083);
