@@ -1,0 +1,19 @@
+{{# if error}}
+
+<h4>Content not found </h4?
+
+{{else}}
+
+<div class="card" style="display: inline-block;  ">
+
+  <div class="card-block">
+    <h4 class="card-title">{{this.movie.name}}</h4>
+    <h6 class="card-subtitle mb-2 text-muted">{{this.movie.keywords}}</h6>
+    <p class="card-text">{{this.movie.description}}</p>
+  </div>
+  <img class="card-img-bottom center-block img-thumbnail" src="/{{this.movie.poster}}" style='margin: 0 auto'>
+
+</div>
+
+{{/if}}
+

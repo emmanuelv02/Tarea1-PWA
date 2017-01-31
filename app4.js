@@ -47,9 +47,19 @@ movies.insertMovie = function (movieData, callback) {
     movies.createTable(innerCallback);
 }
 
-
 movies.getMovies = function (callback) {
     db.all("SELECT * FROM movies", function (err, rows) {
+        if (err) {
+            callback(err, {})
+        }
+        else {
+            callback(null, rows);
+        }
+    });
+}
+
+movies.getMovie = function(uuid, callback){
+ db.get("SELECT * FROM movies where uuid = ?",uuid, function (err, rows) {
         if (err) {
             callback(err, {})
         }
@@ -178,8 +188,36 @@ router.get(['/movies/json', '/movies/list/json'], function (req, res) {
 
 //#endregion
 
-app.get(['/css/*', '/js/*'], function (req, res) {
-    res.sendFile(path.join(__dirname + '/views' + req.path));
+//#region ListMovies
+
+router.get('/movies/details/*', function(req, res){
+
+    var renderParams = {};
+    renderParams.title = "Movie Detail";
+
+   
+      movies.getMovie(req.params[0], function (error, data) {
+        if (error == null && data != null) {
+            renderParams.movie = data;
+        }else{
+            renderParams.error = true;
+        }
+
+       res.render('movieDetail', renderParams);
+    });
+
+  
+
+  //  console.log(req.params[0]);
+});
+
+//#endregion
+
+app.get('*/css/*', function (req, res) {
+    res.sendFile(path.join(__dirname + '/views/css/' + req.path.split('/css')[1]));
+});
+app.get('*/js/*', function (req, res) {
+    res.sendFile(path.join(__dirname + '/views/js/' + req.path.split('/js')[1]));
 });
 
 app.get(['/generated/*','/uploads/*'], function (req, res) {
