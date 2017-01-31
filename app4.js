@@ -25,7 +25,7 @@ const fs = require('fs-extra');
 bb.extend(app,
     {
         upload: true,
-        path: 'db/temp',
+        path: 'temp',
         allowedPath: '/movies/create'
     });
 
@@ -37,25 +37,34 @@ movies.createTable = function (callback) {
 
 movies.insertMovie = function (movieData) {
 
-   var callback = function () {
-       var statement = db.prepare('INSERT INTO movies VALUES (?,?,?,?,?)');
-       statement.run(uuidV4(), movieData.nameValue, movieData.descriptionValue, movieData.keywordsValue, movieData.posterPath);
-       statement.finalize();
-   }
+    var callback = function () {
+        var statement = db.prepare('INSERT INTO movies VALUES (?,?,?,?,?)');
+        statement.run(uuidV4(), movieData.nameValue, movieData.descriptionValue, movieData.keywordsValue, movieData.posterPath);
+        statement.finalize();
+    }
 
     movies.createTable(callback);
 }
 
 
+movies.getMovies = function (callback) {
+    db.all("SELECT * FROM movies", function (err, rows) {
+        if (err) {
+            callback(err, {})
+        }
+        else {
+            callback(null, rows);
+        }
+    });
+}
+
+
 //#endregion
 
+//#region CreateMovie
 router.get('/movies/create', function (req, res) {
     res.render('createMovie', {title: 'Create Movie', createmovie: true});
 });
-
-var callback = function () {
-
-}
 
 router.post('/movies/create', function (req, res) {
 
@@ -91,7 +100,7 @@ router.post('/movies/create', function (req, res) {
             extension = filename[filename.length - 1];
         }
 
-        renderParams.posterPath = 'db/posters/' + req.files.poster.uuid + '.' + extension
+        renderParams.posterPath = 'uploads/' + req.files.poster.uuid + '.' + extension
 
         fs.rename(req.files.poster.file, renderParams.posterPath);
         fs.remove(req.files.poster.file.split('poster')[0], function (err) {
@@ -108,16 +117,66 @@ router.post('/movies/create', function (req, res) {
     }
     else {
         movies.insertMovie(renderParams);
+        return res.redirect('/movies');
     }
 
 });
 
+//#endregion
 
-app.get('/css/*', function (req, res) {
+//#region ListMovies
+
+router.get(['/movies', '/movies/list'], function (req, res) {
+
+    var renderParams = {};
+    renderParams.title = "Movies List";
+    renderParams.listmovies = true;
+
+    movies.getMovies(function (error, data) {
+        if (error == null) {
+
+            for (var index in data) {
+                Object.defineProperty(data[index], 'shortDescription', {
+                    get: function () {
+                        if (this.description.length > 150) {
+                            return this.description.substr(0, 149).trim() + '...';
+                        }
+
+                        return this.description;
+                    }
+                })
+            }
+
+            renderParams.movies = data;
+        }
+        res.render('listMovies', renderParams);
+    });
+
+});
+
+
+router.get(['/movies/json', '/movies/list/json'], function (req, res) {
+
+    movies.getMovies(function (error, data) {
+       var movies = {};
+        if (error == null) {
+
+            movies = data;
+        }
+        res.send(movies);
+    });
+
+});
+
+
+//#endregion
+
+app.get(['/css/*', '/js/*'], function (req, res) {
     res.sendFile(path.join(__dirname + '/views' + req.path));
 });
-app.get('/js/*', function (req, res) {
-    res.sendFile(path.join(__dirname + '/views' + req.path));
+
+app.get(['/generated/*','/uploads/*'], function (req, res) {
+    res.sendFile(path.join(__dirname + req.path));
 });
 
 app.use('/', router);

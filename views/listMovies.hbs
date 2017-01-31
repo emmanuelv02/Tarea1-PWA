@@ -1,4 +1,24 @@
 {{# each movies }}
+    <div class="card">
+        <table>
+            <tr>
+                <td>
+                    <img class="card-img img-responsive" width="140" height="209" style="max-width: none"
+                         src="/{{this.poster}}"/>
+                </td>
 
-
+                <td>
+                    <div class="card-block top">
+                        <h4 class="card-title">{{this.name}}</h4>
+                        <h6 class="card-subtitle mb-2 text-muted">{{this.keywords}}</h6>
+                        <p class="card-text">{{this.shortDescription}}</p>
+                    </div>
+                    <div class="card-block bottom">
+                    <a href="/movies/details/{{this.uuid}}" class="btn btn-primary">View Details</a>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <br/>
 {{/each}}
