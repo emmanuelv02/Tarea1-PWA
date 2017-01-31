@@ -1,6 +1,6 @@
 var express = require('express');
 var app = express();
-var path = require("path");
+const  path = require("path");
 var bodyParser = require('body-parser')
 
 app.use(bodyParser.json());
@@ -16,7 +16,8 @@ app.set('view engine', 'hbs');
 
 //#region sqlite model
 var sqlite3 = require('sqlite3').verbose();
-var db = new sqlite3.Database('db/moviesdb')
+const dbPath = path.resolve(__dirname, 'db/moviesdb')
+const  db = new sqlite3.Database(dbPath)
 const uuidV4 = require('uuid/v4');
 
 var bb = require('express-busboy');
@@ -35,15 +36,15 @@ movies.createTable = function (callback) {
     db.run('CREATE TABLE IF NOT EXISTS movies (uuid TEXT PRIMARY KEY, name TEXT, description TEXT, keywords TEXT, poster TEXT)', callback);
 }
 
-movies.insertMovie = function (movieData) {
+movies.insertMovie = function (movieData, callback) {
 
-    var callback = function () {
+    var innerCallback = function () {
         var statement = db.prepare('INSERT INTO movies VALUES (?,?,?,?,?)');
-        statement.run(uuidV4(), movieData.nameValue, movieData.descriptionValue, movieData.keywordsValue, movieData.posterPath);
+        statement.run(uuidV4(), movieData.nameValue, movieData.descriptionValue, movieData.keywordsValue, movieData.posterPath, callback);
         statement.finalize();
     }
 
-    movies.createTable(callback);
+    movies.createTable(innerCallback);
 }
 
 
@@ -116,11 +117,17 @@ router.post('/movies/create', function (req, res) {
         res.render('createMovie', renderParams);
     }
     else {
-        movies.insertMovie(renderParams);
-        return res.redirect('/movies');
+        movies.insertMovie(renderParams, function(){
+                redirect(res,'/movies')
+        });
+        
     }
 
 });
+
+function redirect(res, path){
+    return res.redirect(path);
+}
 
 //#endregion
 
