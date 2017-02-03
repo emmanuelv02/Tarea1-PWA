@@ -2,6 +2,7 @@ var express = require('express');
 var app = express();
 const path = require("path");
 var bodyParser = require('body-parser')
+var yamlConfig = require('node-yaml-config');
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}))
@@ -16,19 +17,18 @@ app.set('view engine', 'hbs');
 
 //#region Redis
 
-var redis = require('redis');
-var redisClient = redis.createClient('6379', '192.168.100.118');
-redisClient.auth('g5X33nFB');
+var redisConfig = yamlConfig.load(__dirname + '/config/redis_config.yml');
 
-redisClient.on('connect', function () {
-    console.log('redis connected');
-});
+var redis = require('redis');
+var redisClient = redis.createClient(redisConfig.port, redisConfig.host);
+redisClient.auth(redisConfig.auth);
 
 //#endregion
 
 //#region sqlite model
+var sqliteConfig = yamlConfig.load(__dirname + '/config/sqlite_config.yml');
 var sqlite3 = require('sqlite3').verbose();
-const dbPath = path.resolve(__dirname, 'db/moviesdb')
+const dbPath = path.resolve(__dirname, sqliteConfig.dbPath)
 const db = new sqlite3.Database(dbPath)
 const uuidV4 = require('uuid/v4');
 
@@ -39,7 +39,11 @@ bb.extend(app,
     {
         upload: true,
         path: 'temp',
-        allowedPath: '/movies/create'
+        allowedPath: '/movies/create',
+        mimeTypeLimit : [
+            'image/jpeg',
+            'image/png'
+        ]
     });
 
 movies = {};
@@ -87,7 +91,6 @@ movies.getMovie = function (uuid, callback) {
 
 function startWorker() {
     var childProcess = require('child_process').fork(workerPath);
-
     childProcess.send('start');
 }
 
@@ -146,10 +149,8 @@ router.post('/movies/create', function (req, res) {
     }
     else {
         movies.insertMovie(renderParams, function (id) {
-
-            console.log(renderParams);
-
-            redisClient.set('emmanuel:' + id, renderParams.posterPath, function (err, res) {
+            //save redis entry with status at the end of the value.
+            redisClient.set('emmanuel:' + id, renderParams.posterPath+':todo', function (err, res) {
                 if (err != null) {
                     //TODO
                     console.log(err);

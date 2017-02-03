@@ -1,0 +1,2 @@
+default:
+  dbPath: db/moviesdb
