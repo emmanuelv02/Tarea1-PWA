@@ -89,11 +89,6 @@ movies.getMovie = function (uuid, callback) {
 
 //#endregion
 
-function startWorker() {
-    var childProcess = require('child_process').fork(workerPath);
-    childProcess.send('start');
-}
-
 //#region CreateMovie
 router.get('/movies/create', function (req, res) {
     res.render('createMovie', {title: 'Create Movie', createmovie: true});
@@ -373,5 +368,4 @@ app.get('*', function (req, res) {
 });
 
 //#endregion
-startWorker();
 app.listen(8083);

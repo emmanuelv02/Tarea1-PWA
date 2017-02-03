@@ -84,16 +84,10 @@ function checkUploads() {
     setTimeout(checkUploads, 30000);
 }
 
-process.on('message', function (msg) {
-
-    if (msg == 'start') {
-        console.log( getDate() + ': worker started listening... \r\n');
+function startWorking(){
+ console.log( getDate() + ': worker started listening... \r\n');
         checkUploads();
-    }
-
-});
-
-
+}
 
 function getDate(){
    var date = new Date();
@@ -102,7 +96,5 @@ function getDate(){
    //helped with http://stackoverflow.com/questions/10645994/node-js-how-to-format-a-date-string-in-utc
    return date.toISOString().replace(/T/, ' ').replace(/\..+/, '')
 }
-//process.stdout.pipe(output);
-//process.stderr.pipe(errors);
 
-module.exports = {};
+startWorking();
