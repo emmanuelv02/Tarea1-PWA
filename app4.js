@@ -118,7 +118,9 @@ router.post('/movies/create', function (req, res) {
         renderParams.invalidKeywords = true;
     }
 
-    if (!(renderParams.invalidDescription || renderParams.invalidName || renderParams.invalidKeywords )) {
+    var anyInvalidField = (renderParams.invalidDescription || renderParams.invalidName || renderParams.invalidKeywords );
+
+
         if (req.files != null && req.files.poster != null && req.files.poster.file != null) {
             var filename = '';
             var extension = '';
@@ -127,9 +129,12 @@ router.post('/movies/create', function (req, res) {
                 extension = filename[filename.length - 1];
             }
 
-            renderParams.posterPath = 'uploads/' + req.files.poster.uuid + '.' + extension
+            if (!anyInvalidField) {
+                renderParams.posterPath = 'uploads/' + req.files.poster.uuid + '.' + extension
 
-            fs.rename(req.files.poster.file, renderParams.posterPath);
+                fs.rename(req.files.poster.file, renderParams.posterPath);
+            }
+
             fs.remove(req.files.poster.file.split('poster')[0], function (err) {
                 if (err) return console.error(err);
             });
@@ -137,9 +142,9 @@ router.post('/movies/create', function (req, res) {
         else {
             renderParams.invalidPoster = true;
         }
-    }
 
-    if (renderParams.invalidPoster) {
+
+    if (renderParams.invalidPoster || anyInvalidField) {
         res.render('createMovie', renderParams);
     }
     else {
