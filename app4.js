@@ -5,13 +5,13 @@ var bodyParser = require('body-parser')
 var yamlConfig = require('node-yaml-config');
 
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: false}))
+app.use(bodyParser.urlencoded({ extended: false }))
 var workerPath = path.resolve(__dirname, 'worker.js');
 
 var router = express.Router();
 var hbs = require('express-handlebars');
 
-app.engine('hbs', hbs({extname: 'hbs', defaultLayout: 'MainTemplate', layoutsDir: __dirname + '/views/layouts/'}));
+app.engine('hbs', hbs({ extname: 'hbs', defaultLayout: 'MainTemplate', layoutsDir: __dirname + '/views/layouts/' }));
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'hbs');
 
@@ -19,9 +19,9 @@ app.set('view engine', 'hbs');
 
 var redisConfig = yamlConfig.load(__dirname + '/config/redis_config.yml');
 
-var redis = require('redis');
-var redisClient = redis.createClient(redisConfig.port, redisConfig.host);
-redisClient.auth(redisConfig.auth);
+//var redis = require('redis');
+//var redisClient = redis.createClient(redisConfig.port, redisConfig.host);
+//redisClient.auth(redisConfig.auth);
 
 //#endregion
 
@@ -40,58 +40,87 @@ bb.extend(app,
         upload: true,
         path: 'temp',
         allowedPath: '/movies/create',
-        mimeTypeLimit : [
+        mimeTypeLimit: [
             'image/jpeg',
             'image/png'
         ]
     });
 
-movies = {};
+//#region mongodb model
+var MongoClient = require('mongodb').MongoClient;
 
-movies.createTable = function (callback) {
-    db.run('CREATE TABLE IF NOT EXISTS movies (uuid TEXT PRIMARY KEY, name TEXT, description TEXT, keywords TEXT, poster TEXT)', callback);
-}
+//TODO write in a external config file.
+var url = 'mongodb://localhost:27017/emmanuel'
 
-movies.insertMovie = function (movieData, callback) {
+var moviesMongo = {};
 
+moviesMongo.insertMovie = function (movieData, callback) {
     var id = uuidV4();
-    var innerCallback = function () {
-        var statement = db.prepare('INSERT INTO movies VALUES (?,?,?,?,?)');
-        statement.run(id, movieData.nameValue, movieData.descriptionValue, movieData.keywordsValue, movieData.posterPath, callback(id));
-        statement.finalize();
-    }
+    var movieToInsert = {};
+    movieToInsert.uuid = id;
+    movieToInsert.name = movieData.nameValue;
+    movieToInsert.description = movieData.descriptionValue;
+    movieToInsert.keywords = movieData.keywordsValue;
+    movieToInsert.poster = movieData.posterPath;
 
-    movies.createTable(innerCallback);
+    var insertMovieFunction = function (db, callback) {
+        db.collection('movies').insertOne(movieToInsert, function (err, result) {
+            if (err != null) console.log(err);
+            callback();
+        });
+    };
+
+    callMongo(insertMovieFunction);
+    callback(id);
 }
 
-movies.getMovies = function (callback) {
-    db.all("SELECT * FROM movies", function (err, rows) {
-        if (err) {
-            callback(err, {})
-        }
-        else {
-            callback(null, rows);
-        }
+moviesMongo.getMovies = function (callback) {
+    var getAllMovies = function (db, innerCallback) {
+
+        var cursor = db.collection('movies').find();
+        cursor.toArray(function (err, docs) {
+            if (err != null) console.log(err);
+            callback(docs);
+        });
+        innerCallback();
+    };
+
+    callMongo(getAllMovies);
+}
+
+moviesMongo.getMovie = function (movieUuid, callback) {
+
+    var movieToFind = {};
+    movieToFind.uuid = movieUuid;
+
+    var getMovieByUiid = function (db, innerCallback) {
+
+        var cursor = db.collection('movies').find(movieToFind);
+        cursor.nextObject(function (err, doc) {
+            if (err != null) console.log(err);
+            callback(doc);
+        });
+        innerCallback();
+    };
+
+    callMongo(getMovieByUiid);
+}
+
+function callMongo(func) {
+    MongoClient.connect(url, function (err, db) {
+        if (err != null) console.log(err);
+        func(db, function () {
+            db.close();
+        });
     });
 }
-
-movies.getMovie = function (uuid, callback) {
-    db.get("SELECT * FROM movies where uuid = ?", uuid, function (err, rows) {
-        if (err) {
-            callback(err, {})
-        }
-        else {
-            callback(null, rows);
-        }
-    });
-}
-
 
 //#endregion
 
+
 //#region CreateMovie
 router.get('/movies/create', function (req, res) {
-    res.render('createMovie', {title: 'Create Movie', createmovie: true});
+    res.render('createMovie', { title: 'Create Movie', createmovie: true });
 });
 
 router.post('/movies/create', function (req, res) {
@@ -118,44 +147,44 @@ router.post('/movies/create', function (req, res) {
         renderParams.invalidKeywords = true;
     }
 
-    var anyInvalidField = (renderParams.invalidDescription || renderParams.invalidName || renderParams.invalidKeywords );
+    var anyInvalidField = (renderParams.invalidDescription || renderParams.invalidName || renderParams.invalidKeywords);
 
 
-        if (req.files != null && req.files.poster != null && req.files.poster.file != null) {
-            var filename = '';
-            var extension = '';
-            if (req.files.poster.filename.indexOf('.') != -1) {
-                filename = req.files.poster.filename.split('.');
-                extension = filename[filename.length - 1];
-            }
-
-            if (!anyInvalidField) {
-                renderParams.posterPath = 'uploads/' + req.files.poster.uuid + '.' + extension
-
-                fs.rename(req.files.poster.file, renderParams.posterPath);
-            }
-
-            fs.remove(req.files.poster.file.split('poster')[0], function (err) {
-                if (err) return console.error(err);
-            });
+    if (req.files != null && req.files.poster != null && req.files.poster.file != null) {
+        var filename = '';
+        var extension = '';
+        if (req.files.poster.filename.indexOf('.') != -1) {
+            filename = req.files.poster.filename.split('.');
+            extension = filename[filename.length - 1];
         }
-        else {
-            renderParams.invalidPoster = true;
+
+        if (!anyInvalidField) {
+            renderParams.posterPath = 'uploads/' + req.files.poster.uuid + '.' + extension
+
+            fs.rename(req.files.poster.file, renderParams.posterPath);
         }
+
+        fs.remove(req.files.poster.file.split('poster')[0], function (err) {
+            if (err) console.log(err);
+        });
+    }
+    else {
+        renderParams.invalidPoster = true;
+    }
 
 
     if (renderParams.invalidPoster || anyInvalidField) {
         res.render('createMovie', renderParams);
     }
     else {
-        movies.insertMovie(renderParams, function (id) {
+        moviesMongo.insertMovie(renderParams, function (id) {
             //save redis entry with status at the end of the value.
-            redisClient.set('emmanuel:' + id, renderParams.posterPath+':todo', function (err, res) {
-                if (err != null) {
-                    //TODO
-                    console.log(err);
-                }
-            });
+            /*   redisClient.set('emmanuel:' + id, renderParams.posterPath + ':todo', function (err, res) {
+                   if (err != null) {
+                       //TODO
+                       console.log(err);
+                   }
+               });*/
             redirect(res, '/movies')
         });
     }
@@ -175,39 +204,38 @@ router.get(['/movies', '/movies/list'], function (req, res) {
     renderParams.title = "Movies List";
     renderParams.listmovies = true;
 
-    movies.getMovies(function (error, data) {
-        if (error == null) {
+    moviesMongo.getMovies(function (data) {
 
-            for (var index in data) {
-                Object.defineProperty(data[index], 'shortDescription', {
-                    get: function () {
-                        if (this.description.length > 150) {
-                            return this.description.substr(0, 149).trim() + '...';
-                        }
-
-                        return this.description;
+        for (var index in data) {
+            Object.defineProperty(data[index], 'shortDescription', {
+                get: function () {
+                    if (this.description.length > 150) {
+                        return this.description.substr(0, 149).trim() + '...';
                     }
-                });
 
-                var fileName = data[index].poster.split('uploads/')[1];
-                var extension = '';
-                if (fileName.indexOf('.') != -1) {
-                    fileName = fileName.split('.');
-                    extension = fileName[fileName.length - 1];
+                    return this.description;
                 }
-                if(extension != '') {
-                    extension = '.' + extension;
-                }
+            });
 
-                //check if small image exists.
-                var smallImagePath ='generated/'+fileName[0]+ '_small' +extension;
-                if(fs.existsSync(__dirname +'/'+smallImagePath)){
-                    data[index].poster = smallImagePath;
-                }
+            var fileName = data[index].poster.split('uploads/')[1];
+            var extension = '';
+            if (fileName.indexOf('.') != -1) {
+                fileName = fileName.split('.');
+                extension = fileName[fileName.length - 1];
+            }
+            if (extension != '') {
+                extension = '.' + extension;
             }
 
-            renderParams.movies = data;
+            //check if small image exists.
+            var smallImagePath = 'generated/' + fileName[0] + '_small' + extension;
+            if (fs.existsSync(__dirname + '/' + smallImagePath)) {
+                data[index].poster = smallImagePath;
+            }
         }
+
+        renderParams.movies = data;
+
         res.render('listMovies', renderParams);
     });
 
@@ -216,7 +244,7 @@ router.get(['/movies', '/movies/list'], function (req, res) {
 
 router.get(['/movies/json', '/movies/list/json'], function (req, res) {
 
-    movies.getMovies(function (error, data) {
+    moviesMongo.getMovies(function (error, data) {
         var movies = {};
         if (error == null) {
 
@@ -237,10 +265,8 @@ router.get('/movies/details/*', function (req, res) {
     var renderParams = {};
     renderParams.title = "Movie Detail";
 
-
-    movies.getMovie(req.params[0], function (error, data) {
-        if (error == null && data != null) {
-
+    moviesMongo.getMovie(req.params[0], function (data) {
+        if ( data != null) {
 
             var fileName = data.poster.split('uploads/')[1];
             var extension = '';
@@ -248,12 +274,12 @@ router.get('/movies/details/*', function (req, res) {
                 fileName = fileName.split('.');
                 extension = fileName[fileName.length - 1];
             }
-            if(extension != '') {
+            if (extension != '') {
                 extension = '.' + extension;
             }
             //check if optimized image exists.
-            var optimizedImagePath ='generated/'+fileName[0]+ '_optimized' +extension;
-            if(fs.existsSync(__dirname +'/'+optimizedImagePath)){
+            var optimizedImagePath = 'generated/' + fileName[0] + '_optimized' + extension;
+            if (fs.existsSync(__dirname + '/' + optimizedImagePath)) {
                 data.poster = optimizedImagePath;
             }
 
