@@ -19,9 +19,9 @@ app.set('view engine', 'hbs');
 
 var redisConfig = yamlConfig.load(__dirname + '/config/redis_config.yml');
 
-//var redis = require('redis');
-//var redisClient = redis.createClient(redisConfig.port, redisConfig.host);
-//redisClient.auth(redisConfig.auth);
+var redis = require('redis');
+var redisClient = redis.createClient(redisConfig.port, redisConfig.host);
+redisClient.auth(redisConfig.auth);
 
 //#endregion
 
@@ -179,12 +179,12 @@ router.post('/movies/create', function (req, res) {
     else {
         moviesMongo.insertMovie(renderParams, function (id) {
             //save redis entry with status at the end of the value.
-            /*   redisClient.set('emmanuel:' + id, renderParams.posterPath + ':todo', function (err, res) {
-                   if (err != null) {
-                       //TODO
-                       console.log(err);
-                   }
-               });*/
+            redisClient.set('emmanuel:' + id, renderParams.posterPath + ':todo', function (err, res) {
+                if (err != null) {
+                    //TODO
+                    console.log(err);
+                }
+            });
             redirect(res, '/movies')
         });
     }
@@ -266,7 +266,7 @@ router.get('/movies/details/*', function (req, res) {
     renderParams.title = "Movie Detail";
 
     moviesMongo.getMovie(req.params[0], function (data) {
-        if ( data != null) {
+        if (data != null) {
 
             var fileName = data.poster.split('uploads/')[1];
             var extension = '';
