@@ -16,7 +16,6 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'hbs');
 
 //#region Redis
-
 var redisConfig = yamlConfig.load(__dirname + '/config/redis_config.yml');
 
 var redis = require('redis');
@@ -24,12 +23,6 @@ var redisClient = redis.createClient(redisConfig.port, redisConfig.host);
 redisClient.auth(redisConfig.auth);
 
 //#endregion
-
-//#region sqlite model
-var sqliteConfig = yamlConfig.load(__dirname + '/config/sqlite_config.yml');
-var sqlite3 = require('sqlite3').verbose();
-const dbPath = path.resolve(__dirname, sqliteConfig.dbPath)
-const db = new sqlite3.Database(dbPath)
 const uuidV4 = require('uuid/v4');
 
 var bb = require('express-busboy');
@@ -50,7 +43,8 @@ bb.extend(app,
 var MongoClient = require('mongodb').MongoClient;
 
 //TODO write in a external config file.
-var url = 'mongodb://localhost:27017/emmanuel'
+var mongodbConfig = yamlConfig.load(__dirname + '/config/mongodb_config.yml');
+var url = mongodbConfig.url;
 
 var moviesMongo = {};
 
