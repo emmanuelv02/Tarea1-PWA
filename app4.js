@@ -238,13 +238,8 @@ router.get(['/movies', '/movies/list'], function (req, res) {
 
 router.get(['/movies/json', '/movies/list/json'], function (req, res) {
 
-    moviesMongo.getMovies(function (error, data) {
-        var movies = {};
-        if (error == null) {
-
-            movies = data;
-        }
-        res.send(movies);
+    moviesMongo.getMovies(function (data) {
+        res.send(data);
     });
 
 });
