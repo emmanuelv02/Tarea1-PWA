@@ -18,6 +18,8 @@ var errors = fs.createWriteStream(__dirname + '/workerErrors.log', {flags: 'a'})
 process.stdout.write = output.write.bind(output);
 process.stderr.write = errors.write.bind(errors);
 
+var tinify = require('tinify');
+tinify.key = 'fd1GMY43xs1xzmMrfU9Ge19zWEoXUrMu';
 
 function checkUploads() {
     redisClient.keys("emmanuel:*", function (err, keys) {
@@ -59,16 +61,13 @@ function checkUploads() {
                                     }
                                 });
 
-                            sharp(__dirname + '/' + value)
-                                .resize(675)
-                                .jpeg({quality: 60})
-                                .toFile(__dirname + '/generated/' + fileName[0] + '_optimized' + extension, function (err, info) {
-                                    if (err) {
-                                        console.error(getDate() + ': Error creating small thumbnail of movie ' + movieId + ' : ' + err);
-                                    } else {
-                                        console.log(getDate() + ': Optimized image of movie ' + movieId + ' created.');
-                                    }
-                                });
+                            tinify.fromFile(__dirname + '/' + value).toFile(__dirname + '/generated/' + fileName[0] + '_optimized' + extension, function(err) {
+                                if (err) {
+                                    console.error(getDate() + ': Error creating compressed image of movie ' +movieId + ' : ' + err);
+                                } else {
+                                    console.log(getDate()+ ': Compressed image of movie ' + movieId + ' created');
+                                }
+                            });
                         }
                     }
                     else {
