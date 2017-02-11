@@ -131,7 +131,9 @@ router.post('/movies/create', function (req, res) {
 
     if (req.body.description != null && req.body.description.trim() != '') {
         renderParams.descriptionValue = req.body.description.trim();
-    } else {
+    } else if (req.body.Description != null && req.body.Description.trim() != '') {
+        renderParams.descriptionValue = req.body.Description.trim();
+    }else{
         renderParams.invalidDescription = true;
     }
 
@@ -144,21 +146,31 @@ router.post('/movies/create', function (req, res) {
     var anyInvalidField = (renderParams.invalidDescription || renderParams.invalidName || renderParams.invalidKeywords);
 
 
-    if (req.files != null && req.files.poster != null && req.files.poster.file != null) {
+    if (req.files != null && ((req.files.poster != null && req.files.poster.file != null ) || ( req.files.image != null && req.files.image.file != null))) {
+
+        var posterImage = null;
+
+        if(req.files.poster != null){
+            posterImage = req.files.poster;
+        }
+        else{
+            posterImage = req.files.image;
+        }
+
         var filename = '';
         var extension = '';
-        if (req.files.poster.filename.indexOf('.') != -1) {
-            filename = req.files.poster.filename.split('.');
+        if (posterImage.filename.indexOf('.') != -1) {
+            filename = posterImage.filename.split('.');
             extension = filename[filename.length - 1];
         }
 
         if (!anyInvalidField) {
-            renderParams.posterPath = 'uploads/' + req.files.poster.uuid + '.' + extension
+            renderParams.posterPath = 'uploads/' + posterImage.uuid + '.' + extension
 
-            fs.rename(req.files.poster.file, renderParams.posterPath);
+            fs.rename(posterImage.file, renderParams.posterPath);
         }
 
-        fs.remove(req.files.poster.file.split('poster')[0], function (err) {
+        fs.remove(posterImage.file.split('poster')[0], function (err) {
             if (err) console.log(err);
         });
     }
@@ -239,6 +251,12 @@ router.get(['/movies', '/movies/list'], function (req, res) {
 router.get(['/movies/json', '/movies/list/json'], function (req, res) {
 
     moviesMongo.getMovies(function (data) {
+
+        var stringifiedData = JSON.stringify(data);
+        //For tests purpose
+        stringifiedData = stringifiedData.replace(/"poster":/g, '"image":');
+        data = JSON.parse(stringifiedData);
+
         res.send(data);
     });
 
@@ -248,6 +266,11 @@ router.get(['/movies/json', '/movies/list/json'], function (req, res) {
 //#endregion
 
 //#region MovieDetails
+
+router.get(['/movies/details','/movies/id'], function (req, res) {
+    res.status(404);
+    res.send();
+});
 
 router.get('/movies/details/*', function (req, res) {
 
@@ -275,6 +298,7 @@ router.get('/movies/details/*', function (req, res) {
             renderParams.movie = data;
         } else {
             renderParams.error = true;
+            res.status(404);
         }
 
         res.render('movieDetail', renderParams);
