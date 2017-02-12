@@ -5,13 +5,12 @@ var bodyParser = require('body-parser')
 var yamlConfig = require('node-yaml-config');
 
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }))
-var workerPath = path.resolve(__dirname, 'worker.js');
+app.use(bodyParser.urlencoded({extended: false}))
 
 var router = express.Router();
 var hbs = require('express-handlebars');
 
-app.engine('hbs', hbs({ extname: 'hbs', defaultLayout: 'MainTemplate', layoutsDir: __dirname + '/views/layouts/' }));
+app.engine('hbs', hbs({extname: 'hbs', defaultLayout: 'MainTemplate', layoutsDir: __dirname + '/views/layouts/'}));
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'hbs');
 
@@ -32,12 +31,16 @@ bb.extend(app,
     {
         upload: true,
         path: 'temp',
-        allowedPath: '/movies/create',
+        allowedPath: canUploadFileThere,
         mimeTypeLimit: [
             'image/jpeg',
             'image/png'
         ]
     });
+
+function canUploadFileThere(path) {
+    return (path == '/movies/create' || path == '/image');
+}
 
 //#region mongodb model
 var MongoClient = require('mongodb').MongoClient;
@@ -114,7 +117,7 @@ function callMongo(func) {
 
 //#region CreateMovie
 router.get('/movies/create', function (req, res) {
-    res.render('createMovie', { title: 'Create Movie', createmovie: true });
+    res.render('createMovie', {title: 'Create Movie', createmovie: true});
 });
 
 router.post('/movies/create', function (req, res) {
@@ -133,7 +136,7 @@ router.post('/movies/create', function (req, res) {
         renderParams.descriptionValue = req.body.description.trim();
     } else if (req.body.Description != null && req.body.Description.trim() != '') {
         renderParams.descriptionValue = req.body.Description.trim();
-    }else{
+    } else {
         renderParams.invalidDescription = true;
     }
 
@@ -150,10 +153,10 @@ router.post('/movies/create', function (req, res) {
 
         var posterImage = null;
 
-        if(req.files.poster != null){
+        if (req.files.poster != null) {
             posterImage = req.files.poster;
         }
-        else{
+        else {
             posterImage = req.files.image;
         }
 
@@ -267,7 +270,7 @@ router.get(['/movies/json', '/movies/list/json'], function (req, res) {
 
 //#region MovieDetails
 
-router.get(['/movies/details','/movies/id'], function (req, res) {
+router.get(['/movies/details', '/movies/id'], function (req, res) {
     res.status(404);
     res.send();
 });
@@ -305,6 +308,52 @@ router.get('/movies/details/*', function (req, res) {
     });
 });
 
+//#endregion
+
+//#region UploadImage
+
+app.get(['/img/*', '/image/*'], function (req, res) {
+    if (fs.existsSync(__dirname + '/img/' + req.params[0])) {
+        res.sendFile(path.join(__dirname + '/img/' + req.params[0]));
+    } else {
+        res.status(404);
+        res.send();
+    }
+});
+app.get('/image', function (req, res) {
+    res.status(404);
+    res.send();
+});
+
+app.post('/image', function (req, res) {
+
+    if (req.headers['content-type'].indexOf('multipart/form-data') <= -1) {
+        res.status(400);
+        res.send();
+    }
+    else {
+
+        if (req.files != null && req.files.image != null && req.files.image.file != null) {
+
+            var image = req.files.image;
+
+            var filename = '';
+            var extension = '';
+            if (image.filename.indexOf('.') != -1) {
+                filename = image.filename.split('.');
+                extension = filename[filename.length - 1];
+            }
+            fs.rename(image.file, 'img/' + image.filename);
+            fs.remove(image.file.split('image')[0], function (err) {
+                if (err) console.log(err);
+                else {
+                    res.status(200);
+                    res.send();
+                }
+            });
+        }
+    }
+});
 //#endregion
 
 app.get('*/css/*', function (req, res) {
